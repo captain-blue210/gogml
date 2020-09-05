@@ -16,3 +16,7 @@
 
 credentials.json
 token.json
+
+magazine
+
+.DS_Store

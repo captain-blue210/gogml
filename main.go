@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -70,6 +71,29 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
+func saveFile(title, content string) error {
+	path := filepath.Join("magazine", title+".txt")
+	fmt.Println(path)
+	// 書き込み用にファイルを開く
+	df, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = df.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	// 関数終了時に閉じる
+	defer func() {
+		if err := df.Close(); err != nil {
+			err = err
+		}
+	}()
+	return nil
+}
+
 func main() {
 	b, err := ioutil.ReadFile("credentials.json")
 	if err != nil {
@@ -108,9 +132,18 @@ func main() {
 				log.Fatalf("メールの取得に失敗しました。 %v", err)
 			}
 
-			dec, _ := base64.StdEncoding.DecodeString(msg.Payload.Body.Data)
-			log.Println(string(dec))
+			var title string
+			for _, header := range msg.Payload.Headers {
+				if header.Name == "Subject" {
+					title = header.Value
+				}
+			}
+
+			btxt, _ := base64.URLEncoding.DecodeString(msg.Payload.Body.Data)
+			mailText := string(btxt)
+			saveFile(title, mailText)
 		}
+
 		if res.NextPageToken == "" {
 			break
 		}
